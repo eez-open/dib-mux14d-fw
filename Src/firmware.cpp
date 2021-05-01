@@ -7,6 +7,28 @@
 #include "firmware.h"
 #include "utils.h"
 
+/*
+
+There is two "ports":  P1 and P2.
+
+P1 outputs are: PA0 to PA6 (in total 7 relays).
+P2 outputs are: PB0 to PB6 (in total 7 relays).
+
+There are also 3 "special" relays:
+  - P2_EXT on PA15 which connects P1 and P2 ports into one 14-bit.
+  - P1 relay (PB10) connects selected input to P1 output,
+  - P2 relay (PB7) connects selected P2 input to P2 output.
+
+SCPI channels:
+	- (@n01) is for P1 "activation" relay
+	- (@n02) is for P1 "activation" relay
+	- in future (@n03) is for P2_EXT (PA15)
+	- (@n11:n17) for P1 port
+	- (@n21:n27) for P2 port,
+
+Temperature sensor (Cold Junction Temperature): ADC on F0
+*/
+
 //static const uint32_t CONF_SPI_TRANSFER_TIMEOUT_MS = 2000;
 static const uint32_t CONF_RELAY_DEBOUNCE_TIME_MS = 10;
 
@@ -31,17 +53,32 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
 }
 
 // relays
-static const int NUM_RELAYS = 6;
-static GPIO_TypeDef *RELAY_PORTS[NUM_RELAYS] = { PR0_GPIO_Port, PR1_GPIO_Port, PR2_GPIO_Port, PR3_GPIO_Port, PR4_GPIO_Port, PR5_GPIO_Port };
-static uint16_t RELAY_PINS[NUM_RELAYS] = { PR0_Pin, PR1_Pin, PR2_Pin, PR3_Pin, PR4_Pin, PR5_Pin };
-uint8_t g_relayStates = 0; // use this to store the latest state of relays, at the beginning all are off
+static const int NUM_RELAYS = 8;
+
+static GPIO_TypeDef *P1_RELAY_PORTS[NUM_RELAYS] = { P1_0_GPIO_Port, P1_1_GPIO_Port, P1_2_GPIO_Port, P1_3_GPIO_Port, P1_4_GPIO_Port, P1_5_GPIO_Port, P1_6_GPIO_Port, P1_GPIO_Port };
+static uint16_t P1_RELAY_PINS[NUM_RELAYS] = { P1_0_Pin, P1_1_Pin, P1_2_Pin, P1_3_Pin, P1_4_Pin, P1_5_Pin, P1_6_Pin, P1_Pin };
+uint8_t g_p1RelayStates = 0; // use this to store the latest state of relays, at the beginning all are off
+
+static GPIO_TypeDef *P2_RELAY_PORTS[NUM_RELAYS] = { P2_0_GPIO_Port, P2_1_GPIO_Port, P2_2_GPIO_Port, P2_3_GPIO_Port, P2_4_GPIO_Port, P2_5_GPIO_Port, P2_6_GPIO_Port, P2_GPIO_Port };
+static uint16_t P2_RELAY_PINS[NUM_RELAYS] = { P2_0_Pin, P2_1_Pin, P2_2_Pin, P2_3_Pin, P2_4_Pin, P2_5_Pin, P2_6_Pin, P2_Pin };
+uint8_t g_p2RelayStates = 0; // use this to store the latest state of relays, at the beginning all are off
+
+uint8_t g_extRelayState = 0;
 
 // setup is called once at the beginning from the main.c
 extern "C" void setup() {
 	// setup relays, i. e. turn all off
+
 	for (int i = 0; i < NUM_RELAYS; i++) {
-		RESET_PIN(RELAY_PORTS[i], RELAY_PINS[i]);
+		RESET_PIN(P1_RELAY_PORTS[i], P1_RELAY_PINS[i]);
 	}
+
+	for (int i = 0; i < NUM_RELAYS; i++) {
+		RESET_PIN(P2_RELAY_PORTS[i], P2_RELAY_PINS[i]);
+	}
+
+	RESET_PIN(P2_EXT_GPIO_Port, P2_EXT_Pin);
+
 	HAL_Delay(CONF_RELAY_DEBOUNCE_TIME_MS); // prevent debounce
 }
 
@@ -94,14 +131,33 @@ extern "C" void loop() {
 
 		else if (request.command == COMMAND_SET_PARAMS) {
 			// turn on/off relays as instructed
+
+			// P1
 			for (int i = 0; i < NUM_RELAYS; i++) {
-				auto currentRelayState = g_relayStates & (1 << i);
-				auto newRelayState = request.setParams.relayStates & (1 << i);
+				auto currentRelayState = g_p1RelayStates & (1 << i);
+				auto newRelayState = request.setParams.p1RelayStates & (1 << i);
 				if (currentRelayState != newRelayState) {
-					WRITE_PIN(RELAY_PORTS[i], RELAY_PINS[i], newRelayState);
+					WRITE_PIN(P1_RELAY_PORTS[i], P1_RELAY_PINS[i], newRelayState);
 				}
 			}
-			g_relayStates = request.setParams.relayStates;
+			g_p1RelayStates = request.setParams.p1RelayStates;
+
+			// P2
+			for (int i = 0; i < NUM_RELAYS; i++) {
+				auto currentRelayState = g_p2RelayStates & (1 << i);
+				auto newRelayState = request.setParams.p2RelayStates & (1 << i);
+				if (currentRelayState != newRelayState) {
+					WRITE_PIN(P2_RELAY_PORTS[i], P2_RELAY_PINS[i], newRelayState);
+				}
+			}
+			g_p2RelayStates = request.setParams.p2RelayStates;
+
+			// EXT
+			if (g_extRelayState != request.setParams.extRelayState) {
+				WRITE_PIN(P2_EXT_GPIO_Port, P2_EXT_Pin, request.setParams.extRelayState);
+				g_extRelayState = request.setParams.extRelayState;
+			}
+
 			HAL_Delay(CONF_RELAY_DEBOUNCE_TIME_MS); // prevent debounce
 
 			response.setParams.result = 1; // success

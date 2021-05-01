@@ -8,7 +8,9 @@ enum Command {
 };
 
 struct SetParams {
-	uint8_t relayStates;
+	uint8_t p1RelayStates;
+	uint8_t p2RelayStates;
+	uint8_t extRelayState;
 };
 
 struct Request {

@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -58,6 +58,36 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define DIB_SYNC_Pin GPIO_PIN_15
+#define DIB_SYNC_GPIO_Port GPIOC
+#define PCB_ID0_Pin GPIO_PIN_0
+#define PCB_ID0_GPIO_Port GPIOF
+#define PCB_ID1_Pin GPIO_PIN_1
+#define PCB_ID1_GPIO_Port GPIOF
+#define P1_0_Pin GPIO_PIN_0
+#define P1_0_GPIO_Port GPIOA
+#define P1_1_Pin GPIO_PIN_1
+#define P1_1_GPIO_Port GPIOA
+#define P1_2_Pin GPIO_PIN_2
+#define P1_2_GPIO_Port GPIOA
+#define P1_3_Pin GPIO_PIN_3
+#define P1_3_GPIO_Port GPIOA
+#define P1_4_Pin GPIO_PIN_4
+#define P1_4_GPIO_Port GPIOA
+#define P1_5_Pin GPIO_PIN_5
+#define P1_5_GPIO_Port GPIOA
+#define P1_6_Pin GPIO_PIN_6
+#define P1_6_GPIO_Port GPIOA
+#define CJ_AIN_Pin GPIO_PIN_7
+#define CJ_AIN_GPIO_Port GPIOA
+#define P2_0_Pin GPIO_PIN_0
+#define P2_0_GPIO_Port GPIOB
+#define P2_1_Pin GPIO_PIN_1
+#define P2_1_GPIO_Port GPIOB
+#define P2_2_Pin GPIO_PIN_2
+#define P2_2_GPIO_Port GPIOB
+#define P1_Pin GPIO_PIN_10
+#define P1_GPIO_Port GPIOB
 #define DIB_CSA_Pin GPIO_PIN_12
 #define DIB_CSA_GPIO_Port GPIOB
 #define DIB_SCLK_Pin GPIO_PIN_13
@@ -68,18 +98,18 @@ void Error_Handler(void);
 #define DIB_MOSI_GPIO_Port GPIOB
 #define DIB_IRQ_Pin GPIO_PIN_12
 #define DIB_IRQ_GPIO_Port GPIOA
-#define PR0_Pin GPIO_PIN_3
-#define PR0_GPIO_Port GPIOB
-#define PR1_Pin GPIO_PIN_4
-#define PR1_GPIO_Port GPIOB
-#define PR2_Pin GPIO_PIN_5
-#define PR2_GPIO_Port GPIOB
-#define PR3_Pin GPIO_PIN_6
-#define PR3_GPIO_Port GPIOB
-#define PR4_Pin GPIO_PIN_7
-#define PR4_GPIO_Port GPIOB
-#define PR5_Pin GPIO_PIN_8
-#define PR5_GPIO_Port GPIOB
+#define P2_EXT_Pin GPIO_PIN_15
+#define P2_EXT_GPIO_Port GPIOA
+#define P2_3_Pin GPIO_PIN_3
+#define P2_3_GPIO_Port GPIOB
+#define P2_4_Pin GPIO_PIN_4
+#define P2_4_GPIO_Port GPIOB
+#define P2_5_Pin GPIO_PIN_5
+#define P2_5_GPIO_Port GPIOB
+#define P2_6_Pin GPIO_PIN_6
+#define P2_6_GPIO_Port GPIOB
+#define P2_Pin GPIO_PIN_7
+#define P2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
