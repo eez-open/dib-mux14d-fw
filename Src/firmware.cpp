@@ -53,17 +53,52 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
 }
 
 // relays
-static const int NUM_RELAYS = 8;
+static const int NUM_RELAYS = 7;
 
-static GPIO_TypeDef *P1_RELAY_PORTS[NUM_RELAYS] = { P1_0_GPIO_Port, P1_1_GPIO_Port, P1_2_GPIO_Port, P1_3_GPIO_Port, P1_4_GPIO_Port, P1_5_GPIO_Port, P1_6_GPIO_Port, P1_GPIO_Port };
-static uint16_t P1_RELAY_PINS[NUM_RELAYS] = { P1_0_Pin, P1_1_Pin, P1_2_Pin, P1_3_Pin, P1_4_Pin, P1_5_Pin, P1_6_Pin, P1_Pin };
+static GPIO_TypeDef *P1_RELAY_PORTS[NUM_RELAYS] = { P1_0_GPIO_Port, P1_1_GPIO_Port, P1_2_GPIO_Port, P1_3_GPIO_Port, P1_4_GPIO_Port, P1_5_GPIO_Port, P1_6_GPIO_Port };
+static uint16_t P1_RELAY_PINS[NUM_RELAYS] = { P1_0_Pin, P1_1_Pin, P1_2_Pin, P1_3_Pin, P1_4_Pin, P1_5_Pin, P1_6_Pin };
 uint8_t g_p1RelayStates = 0; // use this to store the latest state of relays, at the beginning all are off
 
-static GPIO_TypeDef *P2_RELAY_PORTS[NUM_RELAYS] = { P2_0_GPIO_Port, P2_1_GPIO_Port, P2_2_GPIO_Port, P2_3_GPIO_Port, P2_4_GPIO_Port, P2_5_GPIO_Port, P2_6_GPIO_Port, P2_GPIO_Port };
-static uint16_t P2_RELAY_PINS[NUM_RELAYS] = { P2_0_Pin, P2_1_Pin, P2_2_Pin, P2_3_Pin, P2_4_Pin, P2_5_Pin, P2_6_Pin, P2_Pin };
+static GPIO_TypeDef *P2_RELAY_PORTS[NUM_RELAYS] = { P2_0_GPIO_Port, P2_1_GPIO_Port, P2_2_GPIO_Port, P2_3_GPIO_Port, P2_4_GPIO_Port, P2_5_GPIO_Port, P2_6_GPIO_Port };
+static uint16_t P2_RELAY_PINS[NUM_RELAYS] = { P2_0_Pin, P2_1_Pin, P2_2_Pin, P2_3_Pin, P2_4_Pin, P2_5_Pin, P2_6_Pin };
 uint8_t g_p2RelayStates = 0; // use this to store the latest state of relays, at the beginning all are off
 
+uint8_t g_adib1RelayState = 0;
+uint8_t g_adib2RelayState = 0;
+
 uint8_t g_extRelayState = 0;
+
+extern ADC_HandleTypeDef hadc;
+
+#define TS_CAL1_TEMP 30.0f
+#define TS_CAL1 *((uint16_t*) 0x1FFFF7B8)
+#define TS_CAL2_TEMP 110.0f
+#define TS_CAL2 *((uint16_t*) 0x1FFFF7C2)
+
+float getCjTemp() {
+	HAL_ADC_Start(&hadc);
+
+	for (int i = 0; i < 10; i++) {
+		if (HAL_ADC_PollForConversion(&hadc, 10) == HAL_OK) {
+			uint16_t adc = HAL_ADC_GetValue(&hadc);
+			HAL_ADC_Stop(&hadc);
+			// // P: (x, y)
+			// // P1: (TS_CAL1, TS_CAL1_TEMP)
+			// // P2: (TS_CAL2, TS_CAL2_TEMP)
+			// // y(x) = (x - x1) * (y2 - y1) / (x2 - x1) + y1
+			// return roundf((adc * 3.0f / 3.3f - TS_CAL1) * (TS_CAL2_TEMP - TS_CAL1_TEMP) / (TS_CAL2 - TS_CAL1) + TS_CAL1_TEMP);
+
+			return roundf(20.0f + ((adc / 4096.0f) * 3.3f -  1.4423f) / 0.0535f);
+		}
+
+		HAL_Delay(1);
+	}
+
+	HAL_ADC_Stop(&hadc);
+
+	return -273.0f;
+}
+
 
 // setup is called once at the beginning from the main.c
 extern "C" void setup() {
@@ -80,6 +115,8 @@ extern "C" void setup() {
 	RESET_PIN(P2_EXT_GPIO_Port, P2_EXT_Pin);
 
 	HAL_Delay(CONF_RELAY_DEBOUNCE_TIME_MS); // prevent debounce
+
+	HAL_ADCEx_Calibration_Start(&hadc);
 }
 
 // loop is called, of course, inside the loop from the main.c
@@ -116,6 +153,8 @@ extern "C" void loop() {
 
 		if (request.command == COMMAND_GET_INFO) {
 			// return back to the master firmware version and MCU id
+			static const uint16_t MODULE_TYPE_DIB_MUX14D = 14;
+			response.getInfo.moduleType = MODULE_TYPE_DIB_MUX14D;
 			response.getInfo.firmwareMajorVersion = FIRMWARE_VERSION_MAJOR;
 			response.getInfo.firmwareMinorVersion = FIRMWARE_VERSION_MINOR;
 			response.getInfo.idw0 = HAL_GetUIDw0();
@@ -125,8 +164,8 @@ extern "C" void loop() {
 
 		else if (request.command == COMMAND_GET_STATE) {
 			// master periodically asks for the state of the module,
-			// for this module there is nothing much to return really
-			response.getState.tickCount = HAL_GetTick();
+
+			response.getState.cjTemp = getCjTemp();
 		}
 
 		else if (request.command == COMMAND_SET_PARAMS) {
@@ -151,6 +190,18 @@ extern "C" void loop() {
 				}
 			}
 			g_p2RelayStates = request.setParams.p2RelayStates;
+
+			// ADIB1
+			if (g_adib1RelayState != request.setParams.adib1RelayState) {
+				WRITE_PIN(P1_GPIO_Port, P1_Pin, request.setParams.adib1RelayState);
+				g_adib1RelayState = request.setParams.adib1RelayState;
+			}
+
+			// ADIB2
+			if (g_adib2RelayState != request.setParams.adib2RelayState) {
+				WRITE_PIN(P2_GPIO_Port, P2_Pin, request.setParams.adib2RelayState);
+				g_adib2RelayState = request.setParams.adib2RelayState;
+			}
 
 			// EXT
 			if (g_extRelayState != request.setParams.extRelayState) {

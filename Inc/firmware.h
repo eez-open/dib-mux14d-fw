@@ -10,6 +10,8 @@ enum Command {
 struct SetParams {
 	uint8_t p1RelayStates;
 	uint8_t p2RelayStates;
+	uint8_t adib1RelayState;
+	uint8_t adib2RelayState;
 	uint8_t extRelayState;
 };
 
@@ -26,6 +28,7 @@ struct Response {
 
     union {
         struct {
+        	uint16_t moduleType;
             uint8_t firmwareMajorVersion;
             uint8_t firmwareMinorVersion;
             uint32_t idw0;
@@ -34,7 +37,7 @@ struct Response {
         } getInfo;
 
         struct {
-            uint32_t tickCount;
+            float cjTemp;
         } getState;
 
         struct {
