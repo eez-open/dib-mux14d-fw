@@ -29,8 +29,7 @@ SCPI channels:
 Temperature sensor (Cold Junction Temperature): ADC on F0
 */
 
-//static const uint32_t CONF_SPI_TRANSFER_TIMEOUT_MS = 2000;
-static const uint32_t CONF_RELAY_DEBOUNCE_TIME_MS = 10;
+static const uint32_t CONF_RELAY_DEBOUNCE_TIME_MS = 1;
 
 // master-slave communication
 extern "C" void SPI1_Init(void);
